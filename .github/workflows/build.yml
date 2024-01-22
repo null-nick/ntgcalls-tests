@@ -1,7 +1,7 @@
 name: Build And Publish
 on:
   push:
-    branches: [ master ]
+    branches: [ master, arm64-support ]
     paths:
       - '.github/workflows/*'
       - 'cmake/*'
@@ -18,21 +18,21 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            cibw_archs: "native"
-            shared_name: "linux-x86_64"
-            cibw_os_build: "manylinux_"
           #- os: ubuntu-latest
-          #  cibw_archs: "aarch64"
-          #  shared_name: "linux-arm64"
+          #  cibw_archs: "native"
+          #  shared_name: "linux-x86_64"
           #  cibw_os_build: "manylinux_"
-          - os: windows-latest
-            cibw_archs: "native"
-            shared_name: "windows-x86_64"
-          - os: macos-13
-            cibw_archs: "arm64"
-            cibw_os_build: "macosx_arm64"
-            shared_name: "macos-arm64"
+          - os: ubuntu-latest
+            cibw_archs: "aarch64"
+            shared_name: "linux-arm64"
+            cibw_os_build: "manylinux_"
+          #- os: windows-latest
+          #  cibw_archs: "native"
+          #  shared_name: "windows-x86_64"
+          #- os: macos-13
+          #  cibw_archs: "arm64"
+          #  cibw_os_build: "macosx_arm64"
+          #  shared_name: "macos-arm64"
       fail-fast: false
 
     steps:
@@ -40,41 +40,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Set up QEMU
-        if: matrix.cibw_archs == 'aarch64'
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: arm64
-
-      - name: Install SetupTools
-        if: matrix.cibw_os_build == 'macosx_arm64'
-        run: |
-          pip install setuptools
-
-      - name: Build Debug Shared lib
-        run: python3 setup.py build_shared --no-preserve-cache --debug
-
-      - name: Build Release Shared lib
-        run: python3 setup.py build_shared --no-preserve-cache
-
-      - name: Upload Debug Shared lib for ${{ matrix.shared_name }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: ntgcalls.${{ matrix.shared_name }}-debug-shared_libs
-          path: ./shared-output-debug/*
-          if-no-files-found: error
-
-      - name: Upload Release Shared lib for ${{ matrix.shared_name }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: ntgcalls.${{ matrix.shared_name }}-shared_libs
-          path: ./shared-output/*
-          if-no-files-found: error
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.15.0
         env:
+          CIBW_BEFORE_BUILD_LINUX: wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && sudo ./llvm.sh 15
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
           CIBW_BUILD: cp3*-${{ matrix.cibw_os_build }}*
