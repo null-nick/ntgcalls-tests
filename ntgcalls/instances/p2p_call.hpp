@@ -5,6 +5,7 @@
 #pragma once
 #include <future>
 #include <nlohmann/json.hpp>
+#include <call/call.h>
 
 #include "call_interface.hpp"
 #include "ntgcalls/models/auth_params.hpp"
@@ -34,6 +35,10 @@ namespace ntgcalls {
         void applyPendingIceCandidates();
 
         void sendMediaState(MediaState mediaState) const;
+
+        void sendOfferIfNeeded() const;
+
+        void sendInitialSetup() const;
 
     public:
         explicit P2PCall(rtc::Thread* updateThread): CallInterface(updateThread) {}

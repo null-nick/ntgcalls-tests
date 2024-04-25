@@ -31,23 +31,34 @@ namespace ntgcalls {
 
     std::vector<wrtc::RTCServer> RTCServer::toRtcServers(const std::vector<RTCServer>& servers) {
         std::vector<wrtc::RTCServer> wrtcServers;
+        std::vector<int64_t> phoneConnectionIds;
+        for (const auto& server: servers) {
+            if (server.peerTag) {
+                phoneConnectionIds.emplace_back(server.id);
+            }
+        }
+        if (!phoneConnectionIds.empty()) {
+            std::ranges::sort(phoneConnectionIds);
+        }
         for (const auto& server: servers) {
             if (server.peerTag) {
                 const auto hex = [](const bytes::binary& value) {
-                    const auto digit = [](const unsigned char c) {
-                        return static_cast<char>(c < 10 ? '0' + c : 'a' + c - 10);
-                    };
+                    static auto hexDigits = "0123456789abcdef";
                     auto result = std::string();
                     result.reserve(value.size() * 2);
-                    for (const auto ch : value) {
-                        result += digit(static_cast<unsigned char>(ch) / 16);
-                        result += digit(static_cast<unsigned char>(ch) % 16);
+                    for (const auto b : value) {
+                        const uint8_t p1 = b >> 4 & 0xF;
+                        const uint8_t p2 = b & 0xF;
+                        result.push_back(hexDigits[p1]);
+                        result.push_back(hexDigits[p2]);
                     }
                     return result;
                 };
                 const auto pushPhone = [&](const std::string &host) {
+                    const auto itr = std::ranges::find(phoneConnectionIds, server.id);
+                    const size_t reflectorId = itr - phoneConnectionIds.begin() + 1;
                     wrtc::RTCServer rtcServer;
-                    rtcServer.id = server.id;
+                    rtcServer.id = reflectorId;
                     rtcServer.host = host;
                     rtcServer.port = server.port;
                     rtcServer.login = "reflector";
